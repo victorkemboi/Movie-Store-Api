@@ -85,9 +85,9 @@ DATABASES = {
 
         'NAME': 'movie_store',
 
-        'USER': 'postgres',
+        'USER': 'movie_owner',
 
-        'PASSWORD': '1236',
+        'PASSWORD': '1234',
 
         'HOST': '127.0.0.1',
 

@@ -1,6 +1,6 @@
 import graphene
 from graphene_django.types import DjangoObjectType, ObjectType
-from movie_api.movies.models  import Actor, Movie, Genre
+from movies.models  import Actor, Movie, Genre
 
 # Create a GraphQL type for the actor model
 class ActorType(DjangoObjectType):
@@ -67,7 +67,7 @@ class BulkMovieInput(graphene.InputObjectType):
     bulkInput = graphene.List(MovieInput)
 
 
-# Create mutations for actors
+# Create mutations for bulk input of movies
 class CreateBulkMovies(graphene.Mutation):
     class Arguments:
         input = BulkMovieInput(required=True)
@@ -80,8 +80,40 @@ class CreateBulkMovies(graphene.Mutation):
         ok = True
         moviesSaved = []
         for movie in input.bulkInput:
-            for cast in movie.cast:
-                len
+            cast = []
+            for actor in movie.cast:
+                storedActor = Actor.objects.get(name=actor.name)
+                if storedActor is None:
+                    #create a new actor
+                    actor_instance = Actor(name=actor.name)
+                    actor_instance.save()
+                    cast.append(actor_instance)
+                else:
+                    cast.append.storedActor
+
+            genres = []
+            for genre in movie.genres:
+                storedGenre = Genre.objects.get(genre=genre.genre)
+                if storedGenre is None:
+                    #create a new actor
+                    genre_instance = Genre(genre=genre.genre)
+                    genre_instance.save()
+                    genres.append(genre_instance)
+                else:
+                    genres.append.storedGenre
+            
+            movie_instance = Movie(
+            title=movie.title,
+            year=movie.year
+            )
+            movie_instance.save()
+            movie_instance.cast.set(cast)
+            movie_instance.genres.set(genres)
+
+            moviesSaved.append(movie_instance) 
+
+        return CreateBulkMovies(ok=True,movies = moviesSaved )
+
 
 # Create mutations for movies
 class CreateMovie(graphene.Mutation):

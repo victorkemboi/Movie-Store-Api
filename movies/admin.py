@@ -3,7 +3,7 @@ from movies.models import *
 # Register your models here.
 
 class CastInline(admin.TabularInline):
-    model = Movie.actors.through
+    model = Movie.cast.through
     extra = 1
 
 class GenreInline(admin.TabularInline):
