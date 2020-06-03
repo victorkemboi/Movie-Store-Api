@@ -1,6 +1,6 @@
 import graphene
 from graphene_django.types import DjangoObjectType, ObjectType
-from movies.models  import Actor, Movie, Genre
+from movie_api.movies.models  import Actor, Movie, Genre
 
 # Create a GraphQL type for the actor model
 class ActorType(DjangoObjectType):
@@ -63,61 +63,25 @@ class MovieInput(graphene.InputObjectType):
     genres = graphene.List(ActorInput)
     year = graphene.Int()
 
-class MoviesInput(graphene.InputObjectType):
-    title = graphene.String()
-    year = graphene.Int()
-    cast = graphene.List(Actor)
-    genres = graphene.List(GenreInput)
+class BulkMovieInput(graphene.InputObjectType):
+    bulkInput = graphene.List(MovieInput)
 
 
 # Create mutations for actors
-class InsertData(graphene.Mutation):
+class CreateBulkMovies(graphene.Mutation):
     class Arguments:
-        input = MoviesInput(required=True)
+        input = BulkMovieInput(required=True)
 
     ok = graphene.Boolean()
-    actor = graphene.Field(ActorType)
-    movie = graphene.Field(MovieType)
-    genre = graphene.Field(GenreType)
+    movies = graphene.List(MovieType)
 
     @staticmethod
     def mutate(root,infor,input=None):
         ok = True
-
-
-
-class CreateActor(graphene.Mutation):
-    class Arguments:
-        input = ActorInput(required=True)
-
-    ok = graphene.Boolean()
-    actor = graphene.Field(ActorType)
-
-    @staticmethod
-    def mutate(root, info, input=None):
-        ok = True
-        actor_instance = Actor(name=input.name)
-        actor_instance.save()
-        return CreateActor(ok=ok, actor=actor_instance)
-
-class UpdateActor(graphene.Mutation):
-    class Arguments:
-        id = graphene.Int(required=True)
-        input = ActorInput(required=True)
-
-    ok = graphene.Boolean()
-    actor = graphene.Field(ActorType)
-
-    @staticmethod
-    def mutate(root, info, id, input=None):
-        ok = False
-        actor_instance = Actor.objects.get(pk=id)
-        if actor_instance:
-            ok = True
-            actor_instance.name = input.name
-            actor_instance.save()
-            return UpdateActor(ok=ok, actor=actor_instance)
-        return UpdateActor(ok=ok, actor=None)
+        moviesSaved = []
+        for movie in input.bulkInput:
+            for cast in movie.cast:
+                len
 
 # Create mutations for movies
 class CreateMovie(graphene.Mutation):
@@ -171,6 +135,41 @@ class UpdateMovie(graphene.Mutation):
             movie_instance.actors.set(actors)
             return UpdateMovie(ok=ok, movie=movie_instance)
         return UpdateMovie(ok=ok, movie=None)
+
+
+
+class CreateActor(graphene.Mutation):
+    class Arguments:
+        input = ActorInput(required=True)
+
+    ok = graphene.Boolean()
+    actor = graphene.Field(ActorType)
+
+    @staticmethod
+    def mutate(root, info, input=None):
+        ok = True
+        actor_instance = Actor(name=input.name)
+        actor_instance.save()
+        return CreateActor(ok=ok, actor=actor_instance)
+
+class UpdateActor(graphene.Mutation):
+    class Arguments:
+        id = graphene.Int(required=True)
+        input = ActorInput(required=True)
+
+    ok = graphene.Boolean()
+    actor = graphene.Field(ActorType)
+
+    @staticmethod
+    def mutate(root, info, id, input=None):
+        ok = False
+        actor_instance = Actor.objects.get(pk=id)
+        if actor_instance:
+            ok = True
+            actor_instance.name = input.name
+            actor_instance.save()
+            return UpdateActor(ok=ok, actor=actor_instance)
+        return UpdateActor(ok=ok, actor=None)
 
 
 class Mutation(graphene.ObjectType):
