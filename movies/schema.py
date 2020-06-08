@@ -2,6 +2,9 @@ import graphene
 from graphene_django.types import DjangoObjectType, ObjectType
 from movies.models  import Actor, Movie, Genre
 from django.core.exceptions import ObjectDoesNotExist
+from graphene_file_upload.scalars import Upload
+
+import json
 
 # Create a GraphQL type for the actor model
 class ActorType(DjangoObjectType):
@@ -90,6 +93,30 @@ class CreateBulkMovies(graphene.Mutation):
         return CreateBulkMovies(ok=True,movies = moviesSaved )
 
 
+class UploadBulk(graphene.Mutation):
+    class Arguments:
+        file = Upload(required=True)
+
+    movies=graphene.List(MovieType)
+    success = graphene.Boolean()
+
+    def mutate(self, info, file, **kwargs):
+        # do something with your file
+
+        ok = True
+        moviesSaved = []
+        with open(file,'r' , encoding='utf-8') as movie_list:
+                data = json.load(movie_list)
+                for movie in data:
+                # CreateMovie.mutate()
+                    movie_instance = CreateMovie.mutate(movie)
+                    moviesSaved.append(movie_instance) 
+
+                movie_list.close()
+
+        return UploadBulk(success=ok, movies = moviesSaved)
+
+
 # Create mutations for movies
 class CreateMovie(graphene.Mutation):
     class Arguments:
@@ -102,35 +129,39 @@ class CreateMovie(graphene.Mutation):
     def mutate(root, info, input=None):
         ok = True
         cast = []
-        for actor in input.cast:
-            try:
-                storedActor = Actor.objects.get(name=actor.name)
-                cast.append.storedActor
-            except ObjectDoesNotExist:
-                actor_instance = Actor(name=actor.name)
-                actor_instance.save()
-                cast.append(actor_instance)
-           
-        genres = []
-        for genre in input.genres:
-            try:
-                storedGenre = Genre.objects.get(genre=genre.genre)
-                genres.append.storedGenre
+        try:
+            existingMovie =   Movie.objects.get(title=input.title)
+            return CreateMovie(ok=False, movie=existingMovie)
+        except ObjectDoesNotExist:
+            for actor in input.cast:
+                try:
+                    storedActor = Actor.objects.get(name=actor.name)
+                    cast.append.storedActor
+                except ObjectDoesNotExist:
+                    actor_instance = Actor(name=actor.name)
+                    actor_instance.save()
+                    cast.append(actor_instance)
+            
+            genres = []
+            for genre in input.genres:
+                try:
+                    storedGenre = Genre.objects.get(genre=genre.genre)
+                    genres.append.storedGenre
 
-            except ObjectDoesNotExist:
-                 #create a new actor
-                genre_instance = Genre(genre=genre.genre)
-                genre_instance.save()
-                genres.append(genre_instance)
+                except ObjectDoesNotExist:
+                    #create a new actor
+                    genre_instance = Genre(genre=genre.genre)
+                    genre_instance.save()
+                    genres.append(genre_instance)
 
-        movie_instance = Movie(
-          title=input.title,
-          year=input.year
-          )
-        movie_instance.save()
-        movie_instance.cast.set(cast)
-        movie_instance.genres.set(genres)
-        return CreateMovie(ok=ok, movie=movie_instance)
+            movie_instance = Movie(
+            title=input.title,
+            year=input.year
+            )
+            movie_instance.save()
+            movie_instance.cast.set(cast)
+            movie_instance.genres.set(genres)
+            return CreateMovie(ok=ok, movie=movie_instance)
 
 
 class UpdateMovie(graphene.Mutation):
@@ -197,7 +228,8 @@ class UpdateActor(graphene.Mutation):
 
 
 class Mutation(graphene.ObjectType):
-    createMoviesBulk = CreateBulkMovies.Field()
+    
+    uploadBulk = UploadBulk.Field()
     create_actor = CreateActor.Field()
     update_actor = UpdateActor.Field()
     create_movie = CreateMovie.Field()
