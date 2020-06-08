@@ -23,7 +23,6 @@ with open('movie_list.json','r' , encoding='utf-8') as movie_list:
  
     with open('data_prepped.json', 'w') as write_file:
              json.dump( data, write_file)
-
              write_file.close()
 
     movie_list.close()

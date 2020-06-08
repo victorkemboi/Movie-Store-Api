@@ -1,6 +1,7 @@
 import graphene
 from graphene_django.types import DjangoObjectType, ObjectType
 from movies.models  import Actor, Movie, Genre
+from django.core.exceptions import ObjectDoesNotExist
 
 # Create a GraphQL type for the actor model
 class ActorType(DjangoObjectType):
@@ -60,7 +61,7 @@ class MovieInput(graphene.InputObjectType):
     id = graphene.ID()
     title = graphene.String()
     cast = graphene.List(ActorInput)
-    genres = graphene.List(ActorInput)
+    genres = graphene.List(GenreInput)
     year = graphene.Int()
 
 class BulkMovieInput(graphene.InputObjectType):
@@ -80,36 +81,10 @@ class CreateBulkMovies(graphene.Mutation):
         ok = True
         moviesSaved = []
         for movie in input.bulkInput:
-            cast = []
-            for actor in movie.cast:
-                storedActor = Actor.objects.get(name=actor.name)
-                if storedActor is None:
-                    #create a new actor
-                    actor_instance = Actor(name=actor.name)
-                    actor_instance.save()
-                    cast.append(actor_instance)
-                else:
-                    cast.append.storedActor
-
-            genres = []
-            for genre in movie.genres:
-                storedGenre = Genre.objects.get(genre=genre.genre)
-                if storedGenre is None:
-                    #create a new actor
-                    genre_instance = Genre(genre=genre.genre)
-                    genre_instance.save()
-                    genres.append(genre_instance)
-                else:
-                    genres.append.storedGenre
-            
-            movie_instance = Movie(
-            title=movie.title,
-            year=movie.year
-            )
-            movie_instance.save()
-            movie_instance.cast.set(cast)
-            movie_instance.genres.set(genres)
-
+           # CreateMovie.mutate()
+            movie_instance = CreateMovie.mutate(movie)
+            print(movie_instance)
+            break
             moviesSaved.append(movie_instance) 
 
         return CreateBulkMovies(ok=True,movies = moviesSaved )
@@ -126,18 +101,35 @@ class CreateMovie(graphene.Mutation):
     @staticmethod
     def mutate(root, info, input=None):
         ok = True
-        actors = []
-        for actor_input in input.actors:
-          actor = Actor.objects.get(pk=actor_input.id)
-          if actor is None:
-            return CreateMovie(ok=False, movie=None)
-          actors.append(actor)
+        cast = []
+        for actor in input.cast:
+            try:
+                storedActor = Actor.objects.get(name=actor.name)
+                cast.append.storedActor
+            except ObjectDoesNotExist:
+                actor_instance = Actor(name=actor.name)
+                actor_instance.save()
+                cast.append(actor_instance)
+           
+        genres = []
+        for genre in input.genres:
+            try:
+                storedGenre = Genre.objects.get(genre=genre.genre)
+                genres.append.storedGenre
+
+            except ObjectDoesNotExist:
+                 #create a new actor
+                genre_instance = Genre(genre=genre.genre)
+                genre_instance.save()
+                genres.append(genre_instance)
+
         movie_instance = Movie(
           title=input.title,
           year=input.year
           )
         movie_instance.save()
-        movie_instance.actors.set(actors)
+        movie_instance.cast.set(cast)
+        movie_instance.genres.set(genres)
         return CreateMovie(ok=ok, movie=movie_instance)
 
 
@@ -205,6 +197,7 @@ class UpdateActor(graphene.Mutation):
 
 
 class Mutation(graphene.ObjectType):
+    createMoviesBulk = CreateBulkMovies.Field()
     create_actor = CreateActor.Field()
     update_actor = UpdateActor.Field()
     create_movie = CreateMovie.Field()
