@@ -37,9 +37,5 @@ class MovieAdmin(admin.ModelAdmin):
     ]
 admin.site.register(Movie,MovieAdmin)
 
-class CustomerAdmin(admin.ModelAdmin):
-    list_display = ('customer_id','name','email','account_balance')
-    
-admin.site.register(Customer,CustomerAdmin)
 
 admin.site.site_header = 'Movies Admin Panel '
