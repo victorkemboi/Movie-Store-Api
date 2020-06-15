@@ -2,53 +2,11 @@ import graphene
 from graphene_django.types import DjangoObjectType, ObjectType
 from movies.models  import Actor, Movie, Genre
 from django.core.exceptions import ObjectDoesNotExist
-from graphene_file_upload.scalars import Upload
-
+from movies.query import Query
+from movies.query_types import *
 import json
 
-# Create a GraphQL type for the actor model
-class ActorType(DjangoObjectType):
-    class Meta:
-        model = Actor
 
-# Create a GraphQL type for the movie model
-class MovieType(DjangoObjectType):
-    class Meta:
-        model = Movie
-
-class GenreType(DjangoObjectType):
-    class Meta:
-        model = Genre
-
-
-# Create a Query type
-class Query(ObjectType):
-    actor = graphene.Field(ActorType, id=graphene.Int())
-    movie = graphene.Field(MovieType, id=graphene.Int())
-    actors = graphene.List(ActorType)
-    movies= graphene.List(MovieType)
-
-    def resolve_actor(self, info, **kwargs):
-        id = kwargs.get('id')
-
-        if id is not None:
-            return Actor.objects.get(pk=id)
-
-        return None
-
-    def resolve_movie(self, info, **kwargs):
-        id = kwargs.get('id')
-
-        if id is not None:
-            return Movie.objects.get(pk=id)
-
-        return None
-
-    def resolve_actors(self, info, **kwargs):
-        return Actor.objects.all()
-
-    def resolve_movies(self, info, **kwargs):
-        return Movie.objects.all()
 
 
 # Create Input Object Types
@@ -70,6 +28,9 @@ class MovieInput(graphene.InputObjectType):
 class BulkMovieInput(graphene.InputObjectType):
     bulkInput = graphene.List(MovieInput)
 
+class PopulateInput(graphene.InputObjectType):
+    populate = graphene.String()
+
 
 # Create mutations for bulk input of movies
 class CreateBulkMovies(graphene.Mutation):
@@ -80,7 +41,7 @@ class CreateBulkMovies(graphene.Mutation):
     movies = graphene.List(MovieType)
 
     @staticmethod
-    def mutate(root,infor,input=None):
+    def mutate(root,info,input=None):
         ok = True
         moviesSaved = []
         for movie in input.bulkInput:
@@ -93,29 +54,65 @@ class CreateBulkMovies(graphene.Mutation):
         return CreateBulkMovies(ok=True,movies = moviesSaved )
 
 
-class UploadBulk(graphene.Mutation):
+class PopulateDB(graphene.Mutation):
     class Arguments:
-        file = Upload(required=True)
+        input = PopulateInput(required=True)
 
     movies=graphene.List(MovieType)
     success = graphene.Boolean()
 
-    def mutate(self, info, file, **kwargs):
+    @staticmethod
+    def mutate(root, info, input=None):
         # do something with your file
 
         ok = True
         moviesSaved = []
-        with open(file,'r' , encoding='utf-8') as movie_list:
+        with open('movies/data_prepped.json','r' , encoding='utf-8') as movie_list:
                 data = json.load(movie_list)
+                
                 for movie in data:
+                    
                 # CreateMovie.mutate()
-                    movie_instance = CreateMovie.mutate(movie)
-                    moviesSaved.append(movie_instance) 
+                    cast = []
+                    print(movie)
+                    try:
+            
+                        existingMovie =   Movie.objects.get(title=movie["title"])
+                        moviesSaved.append(existingMovie) 
+                    except ObjectDoesNotExist:
+                        for actor in movie["cast"]:
+                            try:
+                                storedActor = Actor.objects.get(name=actor["name"])
+                                cast.append(storedActor)
+                            except ObjectDoesNotExist:
+                                actor_instance = Actor(name=actor["name"])
+                                actor_instance.save()
+                                cast.append(actor_instance)
+                        
+                        genres = []
+                        for genre in movie["genres"]:
+                            try:
+                                storedGenre = Genre.objects.get(genre=genre["genre"])
+                                genres.append(storedGenre)
+
+                            except ObjectDoesNotExist:
+                                #create a new actor
+                                genre_instance = Genre(genre=genre["genre"])
+                                genre_instance.save()
+                                genres.append(genre_instance)
+
+                        movie_instance = Movie(
+                        title=movie["title"],
+                        year=movie["year"]
+                        )
+                        movie_instance.save()
+                        movie_instance.cast.set(cast)
+                        movie_instance.genres.set(genres)
+                        moviesSaved.append(movie_instance) 
 
                 movie_list.close()
 
-        return UploadBulk(success=ok, movies = moviesSaved)
-
+        return PopulateDB(success=ok, movies = moviesSaved)
 
 # Create mutations for movies
 class CreateMovie(graphene.Mutation):
@@ -130,6 +127,7 @@ class CreateMovie(graphene.Mutation):
         ok = True
         cast = []
         try:
+            
             existingMovie =   Movie.objects.get(title=input.title)
             return CreateMovie(ok=False, movie=existingMovie)
         except ObjectDoesNotExist:
@@ -191,8 +189,6 @@ class UpdateMovie(graphene.Mutation):
             return UpdateMovie(ok=ok, movie=movie_instance)
         return UpdateMovie(ok=ok, movie=None)
 
-
-
 class CreateActor(graphene.Mutation):
     class Arguments:
         input = ActorInput(required=True)
@@ -226,14 +222,12 @@ class UpdateActor(graphene.Mutation):
             return UpdateActor(ok=ok, actor=actor_instance)
         return UpdateActor(ok=ok, actor=None)
 
-
 class Mutation(graphene.ObjectType):
     
-    uploadBulk = UploadBulk.Field()
+    #populateDB = PopulateDB.Field()
     create_actor = CreateActor.Field()
     update_actor = UpdateActor.Field()
     create_movie = CreateMovie.Field()
     update_movie = UpdateMovie.Field()
-
 
 schema = graphene.Schema(query=Query, mutation=Mutation)
