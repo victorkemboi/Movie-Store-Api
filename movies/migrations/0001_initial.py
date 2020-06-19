@@ -11,30 +11,4 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.CreateModel(
-            name='Actor',
-            fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('name', models.CharField(max_length=100)),
-            ],
-            options={
-                'ordering': ('name',),
-            },
-        ),
-        migrations.CreateModel(
-            name='Movie',
-            fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('title', models.CharField(max_length=100)),
-                ('year', models.IntegerField()),
-                ('actors', models.ManyToManyField(to='movies.Actor')),
-            ],
-            options={
-                'ordering': ('title',),
-            },
-        ),
     ]

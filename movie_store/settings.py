@@ -26,7 +26,10 @@ SECRET_KEY = 'c(_w(%c5md048dk%b7a71g^-t1e6tikj14^wc^qltqexqw7ek2'
 DEBUG = True
 
 ALLOWED_HOSTS = []
-
+CORS_ORIGIN_ALLOW_ALL = False
+CORS_ORIGIN_WHITELIST = (
+    'http://localhost:8080',
+)
 
 # Application definition
 
@@ -39,7 +42,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'movies',
-    'market'
+    'market',
+    'corsheaders',
 ]
 
 GRAPHENE = {
@@ -52,6 +56,7 @@ GRAPHENE = {
 
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -95,7 +100,7 @@ DATABASES = {
     'default': {
          'ENGINE': 'django.db.backends.postgresql_psycopg2',
 
-        'NAME': 'movie_store',
+        'NAME': 'homeflix',
 
         'USER': 'movie_owner',
 
